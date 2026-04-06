@@ -5,7 +5,7 @@ pipeline {
         BACKEND_IMAGE = 'backend-app'
         BACKEND_CONTAINER = 'backend-container'
         BACKEND_PORT = '5000'
-        GIT_REPO = 'https://github.com/your-username/your-repo.git'
+        GIT_REPO = 'https://github.com/Siva290395/mern-devops-project.git'
         GIT_BRANCH = 'main'
     }
 
