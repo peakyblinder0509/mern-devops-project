@@ -19,6 +19,7 @@ pipeline {
 
         stage('Check Node Version') {
             steps {
+                dir('frontend'){
                 sh '''
                     echo "Node version:"
                     node -v
@@ -27,17 +28,20 @@ pipeline {
                 '''
             }
         }
-
+        }
         stage('Install Dependencies') {
             steps {
+                dir('frontend'){
                 sh 'npm install --legacy-peer-deps'
             }
         }
-
+        }  
         stage('Build') {
             steps {
+                dir('frontend'){
                 sh 'npm run build'
             }
+        }
         }
 
         stage('Verify Build Output') {
