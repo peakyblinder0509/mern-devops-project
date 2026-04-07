@@ -47,8 +47,8 @@ pipeline {
         stage('Verify Build Output') {
             steps {
                 sh '''
-                    echo "Checking dist folder..."
-                    ls -la dist || (echo "dist folder not found!" && exit 1)
+                    echo "Checking build folder..."
+                    ls -la build || (echo "build folder not found!" && exit 1)
                 '''
             }
         }
