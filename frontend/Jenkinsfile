@@ -66,7 +66,7 @@ pipeline {
 
         stage('CloudFront Invalidation') {
             steps {
-                withAWS(credentials: 'pat-creds', region: "${AWS_REGION}") {
+                withAWS(credentials: 'shana-cred', region: "${AWS_REGION}") {
                     sh '''
                         aws cloudfront create-invalidation \
                         --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} \
