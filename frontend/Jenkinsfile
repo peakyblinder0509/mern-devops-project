@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         AWS_REGION = "ap-south-1"
-        S3_BUCKET = "krishnagiri-bargur  "
+        S3_BUCKET = "krishnagiri-bargur"
         CLOUDFRONT_DISTRIBUTION_ID = "E35FULF7FODTGJ"
     }
 
