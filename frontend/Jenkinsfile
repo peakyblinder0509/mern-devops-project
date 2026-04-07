@@ -2,111 +2,81 @@ pipeline {
     agent any
 
     environment {
-        FRONTEND_IMAGE = 'frontend-app'
-        FRONTEND_CONTAINER = 'frontend-container'
-        FRONTEND_PORT = '3000'
-        GIT_REPO_URL = 'https://github.com/Siva290395/mern-devops-project.git'
-        GIT_BRANCH = 'main'
+        AWS_REGION = "ap-south-1"
+        S3_BUCKET = "krishnagiri-bargur  "
+        CLOUDFRONT_DISTRIBUTION_ID = "E35FULF7FODTGJ"
     }
 
     stages {
-        stage('Checkout Code from SCM') {
+
+        stage('Checkout') {
             steps {
-                git branch: "${GIT_BRANCH}", 
-                    url: "${GIT_REPO_URL}",
-                    credentialsId: 'github-credentials'
-                
-                echo "✅ Successfully checked out from ${GIT_REPO_URL}"
-                echo "📂 Current directory: ${pwd()}"
+                git branch: 'main',
+                    credentialsId: 'pat-creds',
+                    url: 'https://github.com/peakyblinder0509/mern-devops-project.git'
             }
         }
 
-        stage('Build Frontend Docker Image') {
+        stage('Check Node Version') {
             steps {
-                dir('frontend') {
+                sh '''
+                    echo "Node version:"
+                    node -v
+                    echo "NPM version:"
+                    npm -v
+                '''
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install --legacy-peer-deps'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'npm run build'
+            }
+        }
+
+        stage('Verify Build Output') {
+            steps {
+                sh '''
+                    echo "Checking dist folder..."
+                    ls -la dist || (echo "dist folder not found!" && exit 1)
+                '''
+            }
+        }
+
+        stage('Deploy to S3') {
+            steps {
+                withAWS(credentials: 'pat-creds', region: "${AWS_REGION}") {
                     sh '''
-                        echo "🐳 Building frontend Docker image..."
-                        docker build -t ${FRONTEND_IMAGE}:latest .
-                        echo "✅ Image built successfully: ${FRONTEND_IMAGE}:latest"
+                        aws s3 sync dist s3://${S3_BUCKET}/ --delete
                     '''
                 }
             }
         }
 
-        stage('Stop and Remove Old Container') {
+        stage('CloudFront Invalidation') {
             steps {
-                sh '''
-                    echo "🛑 Stopping old container..."
-                    docker stop ${FRONTEND_CONTAINER} 2>/dev/null || true
-                    docker rm ${FRONTEND_CONTAINER} 2>/dev/null || true
-                    echo "✅ Old container removed"
-                '''
-            }
-        }
-
-        stage('Run New Frontend Container') {
-            steps {
-                sh '''
-                    echo "🚀 Starting new frontend container..."
-                    docker run -d \
-                        --name ${FRONTEND_CONTAINER} \
-                        -p ${FRONTEND_PORT}:3000 \
-                        --restart unless-stopped \
-                        ${FRONTEND_IMAGE}:latest
-                    
-                    echo "✅ Container started successfully"
-                    echo "📍 Frontend running on http://localhost:${FRONTEND_PORT}"
-                '''
-            }
-        }
-
-        stage('Verify Container Status') {
-            steps {
-                sh '''
-                    echo "🔍 Checking container status..."
-                    sleep 5
-                    
-                    echo "📊 Container List:"
-                    docker ps --filter "name=${FRONTEND_CONTAINER}"
-                    
-                    echo "📝 Container Logs:"
-                    docker logs ${FRONTEND_CONTAINER} --tail 20
-                    
-                    echo "🌐 Testing connection..."
-                    curl -f http://localhost:${FRONTEND_PORT} || echo "Waiting for app to start..."
-                '''
+                withAWS(credentials: 'pat-creds', region: "${AWS_REGION}") {
+                    sh '''
+                        aws cloudfront create-invalidation \
+                        --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} \
+                        --paths "/*"
+                    '''
+                }
             }
         }
     }
 
     post {
         success {
-            echo '''
-                ═══════════════════════════════════════
-                ✅ FRONTEND DEPLOYMENT SUCCESSFUL! ✅
-                ═══════════════════════════════════════
-                📍 Access at: http://localhost:3000
-                🐳 Container: frontend-container
-                🔄 Status: Running
-                ═══════════════════════════════════════
-            '''
+            echo "✅ Frontend deployed successfully"
         }
         failure {
-            echo '''
-                ═══════════════════════════════════════
-                ❌ FRONTEND DEPLOYMENT FAILED! ❌
-                ═══════════════════════════════════════
-            '''
-            sh '''
-                echo "🔍 Debug Information:"
-                echo "Container logs:"
-                docker logs ${FRONTEND_CONTAINER} 2>/dev/null || echo "Container not found"
-                echo "Docker images:"
-                docker images | grep ${FRONTEND_IMAGE}
-            '''
-        }
-        always {
-            echo "🏁 Pipeline execution completed at ${new Date()}"
+            echo "❌ Frontend deployment failed"
         }
     }
-}
