@@ -46,13 +46,14 @@ pipeline {
 
         stage('Verify Build Output') {
             steps {
+                dir('frontend'){
                 sh '''
                     echo "Checking build folder..."
                     ls -la build || (echo "build folder not found!" && exit 1)
                 '''
             }
         }
-
+        }
         stage('Deploy to S3') {
             steps {
                 withAWS(credentials: 'pat-creds', region: "${AWS_REGION}") {
